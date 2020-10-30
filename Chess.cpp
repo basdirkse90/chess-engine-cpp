@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "EnumList.h"
 #include "Chess.h"
+#include <map>
 
 using namespace std;
 
@@ -25,6 +26,7 @@ Chess::Chess(const std::string& fen) {
 
 
 // Method to generate pseudolegal moves
+// TODO: If rook is captured, caslting right can be lost!
 void Chess::generate_pseudolegal_moves(vector<Move>& res) {
 	for (int i = 0; i < 64; i++) {
 		if (get_clr(pos.square_list[i]) != pos.side_to_move) continue;
@@ -91,18 +93,18 @@ void Chess::gen_raymoves(vector<Move>& moves, const function<bool(int)> &cond, i
 };
 
 void Chess::gen_rooklike(vector<Move>& moves, int i, int r, int f, bool is_rook) {
-	gen_raymoves(moves, [f](int offset)->bool { return f + offset < 8; }, 1, i);    // move right
-	gen_raymoves(moves, [f](int offset)->bool { return f - offset >= 0; }, -1, i);	// move left
-	gen_raymoves(moves, [r](int offset)->bool { return r + offset < 8; }, 8, i);	// move up
-	gen_raymoves(moves, [r](int offset)->bool { return r - offset >= 0; }, -8, i);	// move down
+	gen_raymoves(moves, [f](int offset)->bool { return f + offset < 8; }, 1, i, is_rook);   // move right
+	gen_raymoves(moves, [f](int offset)->bool { return f - offset >= 0; }, -1, i, is_rook);	// move left
+	gen_raymoves(moves, [r](int offset)->bool { return r + offset < 8; }, 8, i, is_rook);	// move up
+	gen_raymoves(moves, [r](int offset)->bool { return r - offset >= 0; }, -8, i, is_rook);	// move down
 
 }
 
 void Chess::gen_bishoplike(vector<Move>& moves, int i, int r, int f) {
-	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r + offset < 8; }, 9, i);	 // move up right
-	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r + offset < 8; }, 7, i);	 // move up left
-	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r - offset >= 0; }, -7, i);	 // move down right
-	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r - offset >= 0; }, -9, i); // move down left
+	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r + offset < 8; }, 9, i, false);	 // move up right
+	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r + offset < 8; }, 7, i, false);	 // move up left
+	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r - offset >= 0; }, -7, i, false);	 // move down right
+	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r - offset >= 0; }, -9, i, false);  // move down left
 
 }
 
@@ -242,7 +244,7 @@ void Chess::gen_bpawn(vector<Move>& moves, int i, int r, int f) {
 			}
 		}
 		if (i + offset == pos.en_passant_square)
-			moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_wpawn, EPieceCode::epc_empty, true }); // @suppress("Symbol is not resolved")
+			moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_wpawn, EPieceCode::epc_empty, true });
 	}
 }
 
@@ -502,14 +504,24 @@ int Chess::perft(const unsigned int n, const bool split) {
 	// Make copy since moving changes pseudolegal_moves
 	vector<Move> current_pseudo = pseudolegal_moves;
 
+	map<string, int> splits;
+
 	for (Move mv : current_pseudo) {
+
 		if (do_move(mv)){
 			int add = perft(n-1);
 			nodes += add;
 			undo_last_moves(1, false);
-			if (split)
-				cout << "\t" << square_name(mv.from) << '-' << square_name(mv.to) << mv.promotion << ": " << add << endl;
+			if (split) {
+				stringstream key;
+				key << square_name(mv.from) << '-' << square_name(mv.to) << mv.promotion;
+				splits[key.str()] = add;
+			}
 		}
+	}
+
+	for( auto const& x : splits ) {
+		cout << "\t" << x.first << ": " << x.second << endl;
 	}
 
 	pseudolegal_moves = std::move(current_pseudo);

@@ -68,7 +68,7 @@ private:
 
 	void gen_rooklike(std::vector<Move>& moves, const int i, const int r, const int f, const bool is_rook=false);
 	void gen_bishoplike(std::vector<Move>& moves, const int i, const int r, const int f);
-	void gen_raymoves(std::vector<Move>& moves, const std::function<bool(int)>& cond, const int diff, const int i, const bool is_rook=false);
+	void gen_raymoves(std::vector<Move>& moves, const std::function<bool(int)>& cond, const int diff, const int i, const bool is_rook);
 	void gen_knight(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_king(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_wpawn(std::vector<Move>& moves, const int i, const int r, const int f);
