@@ -2,9 +2,9 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include<algorithm>
+#include <algorithm>
 #include "Chess.h"
-
+#include <cstdlib>
 
 using namespace std;
 
@@ -23,8 +23,13 @@ int main() {
 	c1.print_board();
 	c1.print_pseudolegal_moves();
 
-	int nmin = 3;
-	int nmax = 3;
+	//c1.do_move(6);
+	//c1.do_move(1);
+	c1.print_board();
+	c1.print_pseudolegal_moves();
+
+	int nmin = 6;
+	int nmax = 6;
 	bool split = true;
 
 	for (int n = nmin; n <= nmax; n++) {
@@ -39,8 +44,7 @@ int main() {
 
 	}
 
-	c1.print_board();
-	c1.print_pseudolegal_moves();
+
 
 
 	/*

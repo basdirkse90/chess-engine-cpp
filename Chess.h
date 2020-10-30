@@ -29,6 +29,8 @@ public:
 	// Attempt to do move m. Responsible for checking if (pseudo)legal, and if so, update pseudolegal moves and in_check. Returns succes flag.
 	bool do_move(const Move& m);
 
+	bool do_move(int n);
+
 	// Undo last n moves in move_history
 	void undo_last_moves(const int n=1, const bool recalc_pseudolegal_moves=true);
 

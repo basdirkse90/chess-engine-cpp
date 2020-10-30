@@ -421,12 +421,14 @@ void Chess::update_board(const Move& mv) {
 	}
 
 	pos.side_to_move = !pos.side_to_move;
-	pos.castling_rights = pos.castling_rights & mv.lost_castle_rights;
+	pos.castling_rights = pos.castling_rights ^ mv.lost_castle_rights;
 
 	if (moving_piece == EPieceCode::epc_wpawn && mv.to - mv.from == 16)
 		pos.en_passant_square = mv.to-8;
 	else if (moving_piece == EPieceCode::epc_bpawn && mv.to - mv.from == -16)
 		pos.en_passant_square = mv.to+8;
+	else
+		pos.en_passant_square = -1;
 
 	if (moving_piece == EPieceCode::epc_wpawn || moving_piece == EPieceCode::epc_bpawn || mv.capture != EPieceCode::epc_empty)
 		pos.half_move_count = 0;
@@ -481,6 +483,11 @@ void Chess::revert_board(const Move& mv) {
 	if (pos.side_to_move == EPieceColor::clr_black)
 		pos.full_move_count--;
 
+}
+
+
+bool Chess::do_move(int n) {
+	return do_move(pseudolegal_moves[n-1]);
 }
 
 
