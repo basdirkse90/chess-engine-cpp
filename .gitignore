@@ -39,3 +39,15 @@
 .project
 .cproject
 .settings/
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.filters
+*.user
+*.log
+*.pdb
+*.tlog
+*.recipe
+x64/

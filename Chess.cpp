@@ -26,7 +26,6 @@ Chess::Chess(const std::string& fen) {
 
 
 // Method to generate pseudolegal moves
-// TODO: If rook is captured, caslting right can be lost!
 void Chess::generate_pseudolegal_moves(vector<Move>& res) {
 	for (int i = 0; i < 64; i++) {
 		if (get_clr(pos.square_list[i]) != pos.side_to_move) continue;
@@ -40,7 +39,7 @@ void Chess::generate_pseudolegal_moves(vector<Move>& res) {
 			gen_bishoplike(res, i, r, f);
 			break;
 		case EPieceType::ept_rook:
-			gen_rooklike(res, i, r, f, true);
+			gen_rooklike(res, i, r, f);
 			break;
 		case EPieceType::ept_bishop:
 			gen_bishoplike(res, i, r, f);
@@ -63,48 +62,90 @@ void Chess::generate_pseudolegal_moves(vector<Move>& res) {
 	}
 }
 
-void Chess::gen_raymoves(vector<Move>& moves, const function<bool(int)> &cond, int diff, int i, bool is_rook) {
+void Chess::add_move(vector<Move>& move_list, int from, int to, bool capture, EPieceCode prom, bool is_ep) {
+	EPieceCode moving_piece = pos.square_list[from];
+
+	Move mv{ from, to };
+	mv.promotion = prom;
+	mv.en_passant = is_ep;
+	mv.old_en_passant_square = pos.en_passant_square;
+	mv.old_halfmove_count = pos.half_move_count;
+
+	EPieceCode capt;
+	if (is_ep) {
+		if (to > from)
+			capt = EPieceCode::epc_bpawn;
+		else
+			capt = EPieceCode::epc_wpawn;
+	}
+	else {
+		capt = pos.square_list[to];
+	}
+
+	mv.capture = capt;
+
+	// Lose castling rights after king or rook move
+	if (moving_piece == EPieceCode::epc_wking)
+		mv.lost_castle_rights = pos.castling_rights & CastlingRights::cr_white_both;
+	else if (moving_piece == EPieceCode::epc_bking)
+		mv.lost_castle_rights = pos.castling_rights & CastlingRights::cr_black_both;
+	else if (moving_piece == EPieceCode::epc_wrook) {
+		if (from == 0)
+			mv.lost_castle_rights = pos.castling_rights & CastlingRights::cr_white_long;
+		else if (from == 7)
+			mv.lost_castle_rights = pos.castling_rights & CastlingRights::cr_white_short;
+	}
+	else if (moving_piece == EPieceCode::epc_brook) {
+		if (from == 56)
+			mv.lost_castle_rights = pos.castling_rights & CastlingRights::cr_black_long;
+		else if (from == 63)
+			mv.lost_castle_rights = pos.castling_rights & CastlingRights::cr_black_short;
+	}
+	else
+		mv.lost_castle_rights = CastlingRights::cr_none;
+
+	// Additionally, lose castling rights after rook is captured
+	if (capture) {
+		if (to == 63 && capt == EPieceCode::epc_brook) {
+			mv.lost_castle_rights = mv.lost_castle_rights ^ (pos.castling_rights & CastlingRights::cr_black_short);
+		}
+		else if (to == 56 && capt == EPieceCode::epc_brook) {
+			mv.lost_castle_rights = mv.lost_castle_rights ^ (pos.castling_rights & CastlingRights::cr_black_long);
+		}
+		else if (to == 7 && capt == EPieceCode::epc_wrook) {
+			mv.lost_castle_rights = mv.lost_castle_rights ^ (pos.castling_rights & CastlingRights::cr_white_short);
+		}
+		else if (to == 0 && capt == EPieceCode::epc_wrook) {
+			mv.lost_castle_rights = mv.lost_castle_rights ^ (pos.castling_rights & CastlingRights::cr_white_long);
+		}
+
+	}
+
+	move_list.push_back(mv);
+}
+
+void Chess::gen_raymoves(vector<Move>& moves, const function<bool(int)> &cond, int diff, int i) {
 	int offset = diff;
 	while (cond(offset / diff) && pos.square_list[i + offset] == EPieceCode::epc_empty) {
-		Move mv {i, i + offset, pos.en_passant_square, pos.half_move_count };
-		if (is_rook) {
-			switch(i) {
-			case  0 : mv.lost_castle_rights = (pos.castling_rights & cr_white_long);  break;
-			case  7 : mv.lost_castle_rights = (pos.castling_rights & cr_white_short); break;
-			case 56 : mv.lost_castle_rights = (pos.castling_rights & cr_black_long);  break;
-			case 63 : mv.lost_castle_rights = (pos.castling_rights & cr_black_short); break;
-			}
-		}
-		moves.push_back(mv);
+		add_move(moves, i, i + offset);
 		offset += diff;
 	}
-	if (cond(offset / diff) && get_clr(pos.square_list[i+offset]) == !pos.side_to_move) {
-		Move mv{ i, i + offset, pos.en_passant_square, pos.half_move_count, pos.square_list[i + offset] };
-		if (is_rook) {
-			switch(i) {
-			case  0 : mv.lost_castle_rights = (pos.castling_rights & cr_white_long);  break;
-			case  7 : mv.lost_castle_rights = (pos.castling_rights & cr_white_short); break;
-			case 56 : mv.lost_castle_rights = (pos.castling_rights & cr_black_long);  break;
-			case 63 : mv.lost_castle_rights = (pos.castling_rights & cr_black_short); break;
-			}
-		}
-		moves.push_back(mv);
-	}
+	if (cond(offset / diff) && get_clr(pos.square_list[i+offset]) == !pos.side_to_move)
+		add_move(moves, i, i + offset, true);
 };
 
-void Chess::gen_rooklike(vector<Move>& moves, int i, int r, int f, bool is_rook) {
-	gen_raymoves(moves, [f](int offset)->bool { return f + offset < 8; }, 1, i, is_rook);   // move right
-	gen_raymoves(moves, [f](int offset)->bool { return f - offset >= 0; }, -1, i, is_rook);	// move left
-	gen_raymoves(moves, [r](int offset)->bool { return r + offset < 8; }, 8, i, is_rook);	// move up
-	gen_raymoves(moves, [r](int offset)->bool { return r - offset >= 0; }, -8, i, is_rook);	// move down
-
+void Chess::gen_rooklike(vector<Move>& moves, int i, int r, int f) {
+	gen_raymoves(moves, [f](int offset)->bool { return f + offset < 8; }, 1, i);    // move right
+	gen_raymoves(moves, [f](int offset)->bool { return f - offset >= 0; }, -1, i);	// move left
+	gen_raymoves(moves, [r](int offset)->bool { return r + offset < 8; }, 8, i);	// move up
+	gen_raymoves(moves, [r](int offset)->bool { return r - offset >= 0; }, -8, i);	// move down
 }
 
 void Chess::gen_bishoplike(vector<Move>& moves, int i, int r, int f) {
-	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r + offset < 8; }, 9, i, false);	 // move up right
-	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r + offset < 8; }, 7, i, false);	 // move up left
-	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r - offset >= 0; }, -7, i, false);	 // move down right
-	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r - offset >= 0; }, -9, i, false);  // move down left
+	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r + offset < 8; }, 9, i);	 // move up right
+	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r + offset < 8; }, 7, i);	 // move up left
+	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r - offset >= 0; }, -7, i);	 // move down right
+	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r - offset >= 0; }, -9, i); // move down left
 
 }
 
@@ -115,9 +156,9 @@ void Chess::gen_knight(vector<Move>& moves, int i, int r, int f) {
 			if (0 <= r + dr && r + dr < 8 && 0 <= f + df && f + df < 8) {
 				int target = (r + dr) * 8 + f + df;
 				if (pos.square_list[target] == EPieceCode::epc_empty)
-					moves.push_back(Move{ i, target, pos.en_passant_square, pos.half_move_count });
+					add_move(moves, i, target);
 				else if (get_clr(pos.square_list[target]) == !pos.side_to_move)
-					moves.push_back(Move{ i, target, pos.en_passant_square, pos.half_move_count, pos.square_list[target] });
+					add_move(moves, i, target, true);
 			}
 		}
 	}
@@ -131,53 +172,26 @@ void Chess::gen_king(vector<Move>& moves, int i, int r, int f) {
 			if (dr == 0 && df == 0) continue;
 			if (0 <= r + dr && r + dr < 8 && 0 <= f + df && f + df < 8) {
 				int target = (r + dr) * 8 + f + df;
-				Move mv;
 				if (pos.square_list[target] == EPieceCode::epc_empty)
-					mv = { i, target, pos.en_passant_square, pos.half_move_count };
+					add_move(moves, i, target);
 				else if  (get_clr(pos.square_list[target]) == !pos.side_to_move)
-					mv = { i, target, pos.en_passant_square, pos.half_move_count, pos.square_list[target]};
-				else
-					continue;
-
-				if (pos.side_to_move == EPieceColor::clr_white)
-					mv.lost_castle_rights = pos.castling_rights & cr_white_both;
-				else
-					mv.lost_castle_rights = pos.castling_rights & cr_black_both;
-				moves.push_back(mv);
+					add_move(moves, i, target, true);
 			}
 		}
 	}
 
 	// Castling moves
 	if (pos.side_to_move == EPieceColor::clr_white) {
-		if ((pos.castling_rights & cr_white_short) &&
-			(pos.square_list[5] == EPieceCode::epc_empty) &&
-			(pos.square_list[6] == EPieceCode::epc_empty))
-		{
-			moves.push_back(Move {4, 6, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_empty, EPieceCode::epc_empty, false, pos.castling_rights & cr_white_both} ); // @suppress("Symbol is not resolved")
-		}
-		if ((pos.castling_rights & cr_white_long) &&
-			(pos.square_list[1] == EPieceCode::epc_empty) &&
-			(pos.square_list[2] == EPieceCode::epc_empty) &&
-			(pos.square_list[3] == EPieceCode::epc_empty))
-		{
-			moves.push_back(Move {4, 2, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_empty, EPieceCode::epc_empty, false, pos.castling_rights & cr_white_both }); // @suppress("Symbol is not resolved")
-		}
+		if ((pos.castling_rights & cr_white_short) && pos.square_list[5] == EPieceCode::epc_empty && pos.square_list[6] == EPieceCode::epc_empty)
+			add_move(moves, 4, 6);
+		if ((pos.castling_rights & cr_white_long)  && pos.square_list[1] == EPieceCode::epc_empty && pos.square_list[2] == EPieceCode::epc_empty && pos.square_list[3] == EPieceCode::epc_empty)
+			add_move(moves, 4, 2);
 	}
 	else {
-		if ((pos.castling_rights & cr_black_short) &&
-			(pos.square_list[61] == EPieceCode::epc_empty) &&
-			(pos.square_list[62] == EPieceCode::epc_empty))
-		{
-			moves.push_back(Move {60, 62, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_empty, EPieceCode::epc_empty, false, pos.castling_rights & cr_black_both }); // @suppress("Symbol is not resolved")
-		}
-		if ((pos.castling_rights & cr_black_long) &&
-			(pos.square_list[57] == EPieceCode::epc_empty) &&
-			(pos.square_list[58] == EPieceCode::epc_empty) &&
-			(pos.square_list[59] == EPieceCode::epc_empty))
-		{
-			moves.push_back(Move {60, 58, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_empty, EPieceCode::epc_empty, false, pos.castling_rights & cr_black_both });
-		}
+		if ((pos.castling_rights & cr_black_short) && pos.square_list[61] == EPieceCode::epc_empty && pos.square_list[62] == EPieceCode::epc_empty)
+			add_move(moves, 60, 62);
+		if ((pos.castling_rights & cr_black_long) && pos.square_list[57] == EPieceCode::epc_empty && pos.square_list[58] == EPieceCode::epc_empty && pos.square_list[59] == EPieceCode::epc_empty) 
+			add_move(moves, 60, 58);
 	}
 
 }
@@ -187,13 +201,13 @@ void Chess::gen_wpawn(vector<Move>& moves, int i, int r, int f) {
 	if (pos.square_list[i + 8] == EPieceCode::epc_empty) {
 		if (r == 6) {  // Move is to promotion square
 			for (EPieceCode prom : {EPieceCode::epc_wknight, EPieceCode::epc_wbishop, EPieceCode::epc_wrook, EPieceCode::epc_wqueen}) {
-				moves.push_back(Move{ i, i + 8, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_empty, prom });
+				add_move(moves, i, i + 8, false, prom);
 			}
 		}
 		else {
-			moves.push_back(Move{i, i + 8, pos.en_passant_square, pos.half_move_count });
+			add_move(moves, i, i + 8);
 			if (r == 1 && pos.square_list[i + 16] == EPieceCode::epc_empty)
-				moves.push_back(Move{ i, i + 16, pos.en_passant_square, pos.half_move_count });
+				add_move(moves, i, i + 16);
 		}
 	}
 
@@ -203,15 +217,15 @@ void Chess::gen_wpawn(vector<Move>& moves, int i, int r, int f) {
 		if (get_clr(pos.square_list[i+offset]) == !pos.side_to_move) {
 			if (r == 6) {
 				for (EPieceCode prom : {EPieceCode::epc_wknight, EPieceCode::epc_wbishop, EPieceCode::epc_wrook, EPieceCode::epc_wqueen}) {
-					moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, pos.square_list[i + offset], prom });
+					add_move(moves, i, i+offset, true, prom);
 				}
 			}
 			else {
-				moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, pos.square_list[i + offset] });
+				add_move(moves, i, i+offset, true);
 			}
 		}
 		if (i + offset == pos.en_passant_square)
-			moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_bpawn, EPieceCode::epc_empty, true });
+			add_move(moves, i, i + offset, true, EPieceCode::epc_empty, true);
 	}
 }
 
@@ -220,13 +234,13 @@ void Chess::gen_bpawn(vector<Move>& moves, int i, int r, int f) {
 	if (pos.square_list[i - 8] == EPieceCode::epc_empty) {
 		if (r == 1) {
 			for (EPieceCode prom : {EPieceCode::epc_bknight, EPieceCode::epc_bbishop, EPieceCode::epc_brook, EPieceCode::epc_bqueen}) {
-				moves.push_back(Move{ i, i - 8, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_empty, prom });
+				add_move(moves, i, i - 8, false, prom);
 			}
 		}
 		else {
-			moves.push_back(Move{ i, i - 8, pos.en_passant_square, pos.half_move_count });
+			add_move(moves, i, i - 8);
 			if (r == 6 && pos.square_list[i - 16] == EPieceCode::epc_empty)
-				moves.push_back(Move{ i, i - 16, pos.en_passant_square, pos.half_move_count });
+				add_move(moves, i, i - 16);
 		}
 	}
 
@@ -236,15 +250,15 @@ void Chess::gen_bpawn(vector<Move>& moves, int i, int r, int f) {
 		if (get_clr(pos.square_list[i+offset]) == !pos.side_to_move) {
 			if (r == 1) {
 				for (EPieceCode prom : {EPieceCode::epc_bknight, EPieceCode::epc_bbishop, EPieceCode::epc_brook, EPieceCode::epc_bqueen}) {
-					moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, pos.square_list[i + offset], prom });
+					add_move(moves, i, i + offset, true, prom);
 				}
 			}
 			else {
-				moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, pos.square_list[i + offset] });
+				add_move(moves, i, i + offset, true);
 			}
 		}
 		if (i + offset == pos.en_passant_square)
-			moves.push_back(Move{ i, i + offset, pos.en_passant_square, pos.half_move_count, EPieceCode::epc_wpawn, EPieceCode::epc_empty, true });
+			add_move(moves, i, i + offset, true, EPieceCode::epc_empty, true);
 	}
 }
 
@@ -285,7 +299,7 @@ bool Chess::do_move(const Move& mv) {
 	// Check if move was legal
 
 	// First, check if any move can simply capture the king (i.e. was left or put in check)
-	for (Move new_mv : new_moves) {
+	for (Move &new_mv : new_moves) {
 		if (get_ept(new_mv.capture) == EPieceType::ept_king) {
 			revert_board(mv);
 			return false;
@@ -297,7 +311,7 @@ bool Chess::do_move(const Move& mv) {
 		int through_sq = (mv.to + mv.from)/2;
 
 		// Check Non-pawn pieces -- they can pseudolegally move to the FROM or THROUGH square when they attack them.
-		for (Move new_mv : new_moves) {
+		for (Move &new_mv : new_moves) {
 			if (pos.square_list[new_mv.from] != EPieceCode::epc_wpawn &&
 				pos.square_list[new_mv.from] != EPieceCode::epc_bpawn &&
 				(new_mv.to == mv.from || new_mv.to == through_sq))
@@ -488,7 +502,7 @@ void Chess::revert_board(const Move& mv) {
 }
 
 
-bool Chess::do_move(int n) {
+bool Chess::do_move(unsigned int n) {
 	return do_move(pseudolegal_moves[n-1]);
 }
 
@@ -506,7 +520,7 @@ int Chess::perft(const unsigned int n, const bool split) {
 
 	map<string, int> splits;
 
-	for (Move mv : current_pseudo) {
+	for (Move &mv : current_pseudo) {
 
 		if (do_move(mv)){
 			int add = perft(n-1);

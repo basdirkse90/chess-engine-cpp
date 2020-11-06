@@ -29,7 +29,7 @@ public:
 	// Attempt to do move m. Responsible for checking if (pseudo)legal, and if so, update pseudolegal moves and in_check. Returns succes flag.
 	bool do_move(const Move& m);
 
-	bool do_move(int n);
+	bool do_move(unsigned int n);
 
 	// Undo last n moves in move_history
 	void undo_last_moves(const int n=1, const bool recalc_pseudolegal_moves=true);
@@ -66,9 +66,11 @@ private:
 	void update_board(const Move& mv);	// No checking nothing, just modify Board struct pos by performing Move mv
 	void revert_board(const Move& mv);   	// No checking nothing, just modify Board struct pos by undoing Move mv
 
-	void gen_rooklike(std::vector<Move>& moves, const int i, const int r, const int f, const bool is_rook=false);
+	void add_move(std::vector<Move>& move_list, int from, int to, bool capture = false, EPieceCode prom = EPieceCode::epc_empty, bool is_ep = false);
+
+	void gen_rooklike(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_bishoplike(std::vector<Move>& moves, const int i, const int r, const int f);
-	void gen_raymoves(std::vector<Move>& moves, const std::function<bool(int)>& cond, const int diff, const int i, const bool is_rook);
+	void gen_raymoves(std::vector<Move>& moves, const std::function<bool(int)>& cond, const int diff, const int i);
 	void gen_knight(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_king(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_wpawn(std::vector<Move>& moves, const int i, const int r, const int f);
