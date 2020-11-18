@@ -1,0 +1,75 @@
+2020-11-13 00:21:01,607**----------New game---2020-11-13 00:21:01,607 Fri -------------
+2020-11-13 00:21:04,505*1*Start calc, move no: 0
+2020-11-13 00:21:04,505-->1:ucinewgame
+2020-11-13 00:21:04,505-->1:isready
+2020-11-13 00:21:04,513<--1:readyok
+2020-11-13 00:21:04,523-->1:setoption UCI_Opponent value none 2000 computer Stockfish_10_x64_bmi2
+2020-11-13 00:21:04,523-->1:position startpos
+2020-11-13 00:21:04,523-->1:go wtime 60000 btime 60000 winc 0 binc 0
+
+2020-11-13 00:21:06,593<--1:bestmove d2d4 ponder d7d5
+2020-11-13 00:21:06,593*1*Found move:d2-d4
+2020-11-13 00:21:06,913-->1:position startpos moves d2d4 d7d5
+2020-11-13 00:21:06,975-->1:go ponder wtime 57942 btime 60000 winc 0 binc 0
+
+2020-11-13 00:21:06,977*2*Start calc, move no: 1
+2020-11-13 00:21:06,977-->2:ucinewgame
+2020-11-13 00:21:06,977-->2:isready
+
+2020-11-13 00:21:06,990<--2:readyok
+2020-11-13 00:21:06,992-->2:position startpos moves d2d4
+2020-11-13 00:21:06,992-->2:go wtime 57942 btime 60000 winc 0 binc 0
+
+2020-11-13 00:21:09,173<--2:bestmove d7d5 ponder g1f3
+2020-11-13 00:21:09,173*2*Found move:d7-d5
+2020-11-13 00:21:09,496-->2:position startpos moves d2d4 d7d5 g1f3
+2020-11-13 00:21:09,560-->2:go ponder wtime 57942 btime 57833 winc 0 binc 0
+2020-11-13 00:21:09,560*1*Start calc, move no: 2
+2020-11-13 00:21:09,560-->1:ponderhit
+
+2020-11-13 00:21:11,412<--1:bestmove g1f3 ponder b8c6
+2020-11-13 00:21:11,412*1*Found move:Ng1-f3
+2020-11-13 00:21:11,727-->1:position startpos moves d2d4 d7d5 g1f3 b8c6
+2020-11-13 00:21:11,790-->1:go ponder wtime 56103 btime 57833 winc 0 binc 0
+2020-11-13 00:21:11,790*2*Start calc, move no: 3
+2020-11-13 00:21:11,790-->2:ponderhit
+
+2020-11-13 00:21:13,029<--2:bestmove e7e6 ponder c2c4
+2020-11-13 00:21:13,029*2*Found move:e7-e6
+2020-11-13 00:21:13,355-->2:position startpos moves d2d4 d7d5 g1f3 e7e6 c2c4
+2020-11-13 00:21:13,418-->2:go ponder wtime 56103 btime 56604 winc 0 binc 0
+
+2020-11-13 00:21:13,422*1*Start calc, move no: 4
+2020-11-13 00:21:13,422-->1:stop
+
+2020-11-13 00:21:13,431<--1:bestmove c1f4 ponder g8f6
+2020-11-13 00:21:13,431*1*Bestmove was from pondersearch, ignoring
+
+2020-11-13 00:21:13,433-->1:position startpos moves d2d4 d7d5 g1f3 e7e6
+2020-11-13 00:21:13,498-->1:go wtime 56103 btime 56604 winc 0 binc 0
+
+2020-11-13 00:21:15,254<--1:bestmove b1c3 ponder g8f6
+2020-11-13 00:21:15,254*1*Found move:Nb1-c3
+2020-11-13 00:21:15,575-->1:position startpos moves d2d4 d7d5 g1f3 e7e6 b1c3 g8f6
+2020-11-13 00:21:15,638-->1:go ponder wtime 54280 btime 56604 winc 0 binc 0
+
+2020-11-13 00:21:15,641*2*Start calc, move no: 5
+2020-11-13 00:21:15,641-->2:stop
+
+2020-11-13 00:21:15,643<--2:bestmove g8f6 ponder b1c3
+2020-11-13 00:21:15,643*2*Bestmove was from pondersearch, ignoring
+2020-11-13 00:21:15,643-->2:position startpos moves d2d4 d7d5 g1f3 e7e6 b1c3
+2020-11-13 00:21:15,706-->2:go wtime 54280 btime 56604 winc 0 binc 0
+
+2020-11-13 00:21:16,348<--2:bestmove g8f6 ponder e2e3
+2020-11-13 00:21:16,348*2*Found move:Ng8-f6
+
+2020-11-13 00:21:16,580-->1:stop
+2020-11-13 00:21:16,684-->2:position startpos moves d2d4 d7d5 g1f3 e7e6 b1c3 g8f6 e2e3
+2020-11-13 00:21:16,746-->2:go ponder wtime 54280 btime 55905 winc 0 binc 0
+
+2020-11-13 00:21:16,754*1*Start calc, move no: 6
+2020-11-13 00:21:16,754-->1:ponderhit
+
+2020-11-13 00:21:16,771<--1:bestmove g2g3 ponder b8c6
+2020-11-13 00:21:16,771*1*Found move:g2-g3
