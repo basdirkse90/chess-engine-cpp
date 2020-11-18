@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <future>
 #include "UCIReader.h"
 #include "Chess.h"
 
@@ -123,32 +124,47 @@ void UCIReader::myPerft(bool runall, bool deep) {
 	fen_list[21] = "8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1";				//--Stalemate & Checkmate
 
 	if (runall) {
-		int depth[100] = { 4, 3, 3, 4, 3, 3, 3, 4, 5, 5, 5, 5, 5, 3, 3, 5, 4, 5, 6, 6, 7, 4 };
-		int perft[100] = {};  
+		vector<int> depth;
+		vector<int> perft;
 
-		//TODO: Add perft values
 		if (deep) {
-
+			depth = { 5, 4, 4, 5, 4, 4, 4, 5, 6, 6, 6, 6, 6, 4, 4, 6, 5, 6, 6, 6, 7, 4 };
+			perft = { 4865609, 1073768, 4085603, 674624, 422333, 2103487, 3894594, 1063513, 1134888, 1015133, 1440467, 661072,
+					  803711, 1274206, 1720476, 3821001, 1004658, 217342, 92683, 2217, 567584, 23527};
 		}
 		else {
-
+			depth = { 4, 3, 3, 4, 3, 3, 3, 4, 5, 5, 5, 5, 5, 3, 3, 5, 4, 5, 6, 6, 7, 4 };
+			perft = { 197281, 32636, 97862, 43238, 9467, 62379, 89890, 85765, 185429, 135655, 206379, 120330,
+					  141077, 27826, 50509, 266199, 31961, 38983, 92683, 2217, 567584, 23527 };
 		}
+
+		std::future<int> res[fen_len];
+		for (int i = 0; i < fen_len; i++) {
+			res[i] = std::async(std::launch::async, [&fen_list, &depth, i]() { return Chess(fen_list[i]).perft(depth[i], false, false); });
+			cout << "Computing perft(" << depth[i] << ") from position " << i << ": " << fen_list[i] << endl;
+		}
+		cout << endl;
+
 
 		int correct = 0;
 		for (int i = 0; i < fen_len; i++) {
-			if (deep) {
-				depth[i]++;
+			try {
+				int result = res[i].get();
+				cout << "Result of perft(" << depth[i] << ") from position " << i << ": " << result;
+				if (result == perft[i]) {
+					cout << " as expected." << endl;
+					correct++;
+				}
+				else {
+					cout << ", but expected " << perft[i] << "!!!" << endl;
+				}
 			}
-			cout << "Position " << i << ": " << fen_list[i] << endl;
-			Chess c1 = Chess(fen_list[i]);
-			cout << "perft(" << depth[i] << "): " << endl;
-			int res = c1.perft(depth[i], deep, true);
-			cout << endl << "Nodes searched: " << res << endl << endl;
-			if (res == perft[i])
-				correct++;
+			catch (const std::exception& e) {
+				std::cerr << e.what() << endl;
+			}
 		}
 
-		cout << correct << "/" << fen_len << " positions correct!" << endl;
+		cout << "Perfts finished with " << correct << "/" << fen_len << " positions correct!" << endl;
 
 
 
