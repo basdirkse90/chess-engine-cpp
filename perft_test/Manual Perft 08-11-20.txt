@@ -1,0 +1,19 @@
+Manual Perft Test results 08-11-2020
+
+Position		Depth			#Nodes				Correct
+0				6				  119,060,324		yes
+
+1				5				   34,758,583		yes
+1				6				1,167,902,936		- (too many nodes)
+
+2				5				  193,690,690		yes	 
+
+3				6				   11,030,083		yes
+3				7				  178,633,661		yes
+
+4				5				   15,833,292		yes
+4				6				  706,045,033		- (too many nodes)	
+
+5				5				   89,941,194		yes
+
+6				5				  164,075,551		yes
