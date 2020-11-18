@@ -24,7 +24,7 @@ public:
 	void print_pseudolegal_moves();
 	void print_board();
 
-	int perft(const unsigned int n, const bool split=false);
+	int perft(const unsigned int n, const bool split=false, const bool progress=false);
 
 	// Attempt to do move m. Responsible for checking if (pseudo)legal, and if so, update pseudolegal moves and in_check. Returns succes flag.
 	bool do_move(const Move& m);
@@ -67,10 +67,11 @@ private:
 	void revert_board(const Move& mv);   	// No checking nothing, just modify Board struct pos by undoing Move mv
 
 	void add_move(std::vector<Move>& move_list, int from, int to, bool capture = false, EPieceCode prom = EPieceCode::epc_empty, bool is_ep = false);
+	inline bool is_on_board(const int r, const int f, const int dr, const int df);
 
 	void gen_rooklike(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_bishoplike(std::vector<Move>& moves, const int i, const int r, const int f);
-	void gen_raymoves(std::vector<Move>& moves, const std::function<bool(int)>& cond, const int diff, const int i);
+	void gen_raymoves(std::vector<Move>& moves, const int i, const int r, const int f, const int dr, const int df);
 	void gen_knight(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_king(std::vector<Move>& moves, const int i, const int r, const int f);
 	void gen_wpawn(std::vector<Move>& moves, const int i, const int r, const int f);

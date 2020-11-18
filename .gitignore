@@ -51,3 +51,5 @@
 *.tlog
 *.recipe
 x64/
+packages.config
+packages/

@@ -21,6 +21,7 @@ Chess::Chess(const std::string& fen) {
 	}
 
 	// Initialize pseudolegal_moves
+	pseudolegal_moves.reserve(100);
 	generate_pseudolegal_moves(pseudolegal_moves);
 }
 
@@ -124,36 +125,40 @@ void Chess::add_move(vector<Move>& move_list, int from, int to, bool capture, EP
 	move_list.push_back(mv);
 }
 
-void Chess::gen_raymoves(vector<Move>& moves, const function<bool(int)> &cond, int diff, int i) {
-	int offset = diff;
-	while (cond(offset / diff) && pos.square_list[i + offset] == EPieceCode::epc_empty) {
+bool Chess::is_on_board(const int r, const int f, const int dr, const int df) {
+	return 0 <= r+dr && r+dr < 8 && 0 <= f+df && f+df < 8;
+}
+
+void Chess::gen_raymoves(vector<Move>& moves, int i, int r, int f, int dr, int df) {
+	int dist = 1;
+	int offset = dr*8 + df;
+	while (is_on_board(r, f, dr*dist, df*dist) && pos.square_list[i + offset] == EPieceCode::epc_empty) {
 		add_move(moves, i, i + offset);
-		offset += diff;
+		dist++;
+		offset = dist*(dr*8 + df);
 	}
-	if (cond(offset / diff) && get_clr(pos.square_list[i+offset]) == !pos.side_to_move)
+	if (is_on_board(r, f, dr * dist, df * dist) && get_clr(pos.square_list[i+offset]) == !pos.side_to_move)
 		add_move(moves, i, i + offset, true);
 };
 
 void Chess::gen_rooklike(vector<Move>& moves, int i, int r, int f) {
-	gen_raymoves(moves, [f](int offset)->bool { return f + offset < 8; }, 1, i);    // move right
-	gen_raymoves(moves, [f](int offset)->bool { return f - offset >= 0; }, -1, i);	// move left
-	gen_raymoves(moves, [r](int offset)->bool { return r + offset < 8; }, 8, i);	// move up
-	gen_raymoves(moves, [r](int offset)->bool { return r - offset >= 0; }, -8, i);	// move down
+	gen_raymoves(moves, i, r, f,  0,  1);   // move right
+	gen_raymoves(moves, i, r, f,  0, -1);	// move left
+	gen_raymoves(moves, i, r, f,  1,  0);	// move up
+	gen_raymoves(moves, i, r, f, -1,  0);	// move down
 }
 
 void Chess::gen_bishoplike(vector<Move>& moves, int i, int r, int f) {
-	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r + offset < 8; }, 9, i);	 // move up right
-	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r + offset < 8; }, 7, i);	 // move up left
-	gen_raymoves(moves, [f, r](int offset)->bool { return f + offset < 8 && r - offset >= 0; }, -7, i);	 // move down right
-	gen_raymoves(moves, [f, r](int offset)->bool { return f - offset >= 0 && r - offset >= 0; }, -9, i); // move down left
-
+	gen_raymoves(moves, i, r, f,  1,  1);	 // move up right
+	gen_raymoves(moves, i, r, f,  1, -1);	 // move up left
+	gen_raymoves(moves, i, r, f, -1,  1);	 // move down right
+	gen_raymoves(moves, i, r, f, -1, -1);    // move down left
 }
 
 void Chess::gen_knight(vector<Move>& moves, int i, int r, int f) {
 	for (int dr : {-2, -1, 1, 2}) {
-		if (dr == 0) continue;
 		for (int df = -3 + abs(dr); df <= 3 - abs(dr); df += 2 * (3 - abs(dr))) {
-			if (0 <= r + dr && r + dr < 8 && 0 <= f + df && f + df < 8) {
+			if (is_on_board(r, f, dr, df)) {
 				int target = (r + dr) * 8 + f + df;
 				if (pos.square_list[target] == EPieceCode::epc_empty)
 					add_move(moves, i, target);
@@ -170,7 +175,7 @@ void Chess::gen_king(vector<Move>& moves, int i, int r, int f) {
 	for (int dr = -1; dr <= 1; dr++) {
 		for (int df = -1; df <= 1; df++) {
 			if (dr == 0 && df == 0) continue;
-			if (0 <= r + dr && r + dr < 8 && 0 <= f + df && f + df < 8) {
+			if (is_on_board(r, f, dr, df)) {
 				int target = (r + dr) * 8 + f + df;
 				if (pos.square_list[target] == EPieceCode::epc_empty)
 					add_move(moves, i, target);
@@ -262,7 +267,6 @@ void Chess::gen_bpawn(vector<Move>& moves, int i, int r, int f) {
 	}
 }
 
-
 void Chess::print_pseudolegal_moves() {
 	cout << "Pseudolegal Moves:" << endl << endl;
 	cout << "#\tMove\told_ep\told_hm\tcapt\tprom\tis_ep\tlost_castle" << endl;
@@ -294,6 +298,7 @@ bool Chess::do_move(const Move& mv) {
 	EPieceCode moving_piece = pos.square_list[mv.from];
 	update_board(mv);
 	vector<Move> new_moves{};
+	new_moves.reserve(100);
 	generate_pseudolegal_moves(new_moves);
 
 	// Check if move was legal
@@ -507,7 +512,7 @@ bool Chess::do_move(unsigned int n) {
 }
 
 
-int Chess::perft(const unsigned int n, const bool split) {
+int Chess::perft(const unsigned int n, const bool split, const bool progress) {
 	if (n == 0) {
 		return 1;
 	}
@@ -520,8 +525,21 @@ int Chess::perft(const unsigned int n, const bool split) {
 
 	map<string, int> splits;
 
-	for (Move &mv : current_pseudo) {
+	float sz = (float)current_pseudo.size();
+	for (size_t i = 0; i != current_pseudo.size(); i++) {
+		if (progress) {
+			std::cout << "[";
+			int pos = 70 * (i/sz);
+			for (int i = 0; i < 70; ++i) {
+				if (i < pos) std::cout << "=";
+				else if (i == pos) std::cout << ">";
+				else std::cout << " ";
+			}
+			std::cout << "] " << int(i/sz * 100.0 + 0.0001) << " %\r";
+			std::cout.flush();
+		}
 
+		Move mv = current_pseudo[i];
 		if (do_move(mv)){
 			int add = perft(n-1);
 			nodes += add;
@@ -534,8 +552,12 @@ int Chess::perft(const unsigned int n, const bool split) {
 		}
 	}
 
+	if (progress) {
+		std::cout << "[" << std::string(70, '=') << "] 100 %" << endl;
+	}
+
 	for( auto const& x : splits ) {
-		cout << "\t" << x.first << ": " << x.second << endl;
+		cout << x.first << ": " << x.second << endl;
 	}
 
 	pseudolegal_moves = std::move(current_pseudo);
